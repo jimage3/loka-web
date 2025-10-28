@@ -14,7 +14,7 @@
 <script>
 const $=s=>document.querySelector(s);
 const map=L.map('map',{zoomControl:true}).setView([0,0],2);
-L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy; OSM'}).addTo(map);
+L.tileLayer(document.getElementById("map").style.background = "#0e0e10";).addTo(map);
 const layers={};
 function addLayer(name,geo){ if(layers[name]) map.removeLayer(layers[name]);
   layers[name]=L.geoJSON(geo,{style:{color:'#ffd54a',weight:1,fillOpacity:0.15}}).addTo(map); }
