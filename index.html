@@ -1,26 +1,33 @@
-
-<!doctype html>
-<html>
-<head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Canon Renderer (Phase 0)</title>
-  <link href="https://unpkg.com/maplibre-gl@3.6.1/dist/maplibre-gl.css" rel="stylesheet"/>
-  <style>
-    html,body,#map{height:100%;margin:0}
-    .legend{position:absolute;top:8px;left:8px;background:#fff;padding:8px 10px;border-radius:6px;font:12px system-ui;box-shadow:0 2px 10px rgba(0,0,0,.1)}
-    .legend b{display:block;margin-bottom:6px}
-  </style>
-</head>
+<!doctype html><html lang="en"><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Kranker · Atlas Viewer</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="./assets/app.css">
 <body>
+<header>
+  <div class="brand">🟡 kranker · atlas</div>
+  <input id="base" value="https://jimage3.github.io/canon-core">
+  <button id="load">Load</button>
+</header>
 <div id="map"></div>
-<div class="legend">
-  <b>Phase 0 – Layers</b>
-  • Continents (brown)<br/>
-  • Countries (gov_style)<br/>
-  • Cities (kind)
-</div>
-<script src="https://unpkg.com/maplibre-gl@3.6.1/dist/maplibre-gl.js"></script>
-<script src="./script.js"></script>
-</body>
-</html>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const $=s=>document.querySelector(s);
+const map=L.map('map',{zoomControl:true}).setView([0,0],2);
+L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy; OSM'}).addTo(map);
+const layers={};
+function addLayer(name,geo){ if(layers[name]) map.removeLayer(layers[name]);
+  layers[name]=L.geoJSON(geo,{style:{color:'#ffd54a',weight:1,fillOpacity:0.15}}).addTo(map); }
+async function fetchJSON(u){ const r=await fetch(u); if(!r.ok) throw new Error(u); return r.json(); }
+async function load(){
+  const base=$('#base').value.replace(/\/$/,'');
+  const loka=await fetchJSON(`${base}/master/atlases/worlds/loka.geojson`);
+  const drav=await fetchJSON(`${base}/master/atlases/continents/dravon.geojson`);
+  const lart=await fetchJSON(`${base}/master/atlases/countries/lart.geojson`);
+  const ram =await fetchJSON(`${base}/master/atlases/cities/ramal.geojson`);
+  addLayer('loka',loka); addLayer('dravon',drav); addLayer('lart',lart); addLayer('ramal',ram);
+  map.fitBounds(layers['ramal'].getBounds());
+}
+$('#load').addEventListener('click',load);
+</script>
+</body></html>
