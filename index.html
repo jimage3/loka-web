@@ -1,58 +1,154 @@
-<!doctype html><html lang="en"><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Kranker · Atlas Viewer</title>
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-<link rel="stylesheet" href="./assets/app.css">
+<!doctype html><html lang="th">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Kranker · IS-Lite (2D)</title>
+<style>
+  :root{--bg:#0e0e10;--fg:#e9e9e9;--hl:#ffd54a}
+  *{box-sizing:border-box} html,body{margin:0;height:100%;background:var(--bg);color:var(--fg);font:14px system-ui}
+  header{position:fixed;inset:0 0 auto 0;display:flex;gap:.5rem;align-items:center;padding:.6rem .8rem;background:#111;border-bottom:1px solid #222;z-index:10}
+  .sp{flex:1} input,button,select{background:#1b1b1b;color:#fff;border:1px solid #333;padding:.35rem .5rem;border-radius:.35rem}
+  #view{position:fixed;inset:48px 0 0 0;touch-action:none}
+  .pill{font-weight:700}
+</style>
+
 <body>
 <header>
-  <div class="brand">🟡 kranker · atlas</div>
-  <input id="base" value="https://jimage3.github.io/canon-core">
+  <span class="pill">🟡 IS-Lite</span>
+  <input id="base" placeholder="Artifacts Base URL" value="https://jimage3.github.io/canon-core">
+  <select id="era">
+    <option value="">ALL Eras</option>
+    <option>60_BPF</option>
+    <option>40_BPF</option>
+    <option>0_APF</option>
+  </select>
   <button id="load">Load</button>
-  <button id="export">Export SVG</button>
+  <div class="sp"></div>
+  <button id="fit">Fit</button>
 </header>
-<div id="map"></div>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<canvas id="view"></canvas>
+
 <script>
 const $=s=>document.querySelector(s);
-const map=L.map('map',{zoomControl:true}).setView([0,0],2);
-L.tileLayer(document.getElementById("map").style.background = "#0e0e10";).addTo(map);
-const layers={};
-function addLayer(name,geo){ if(layers[name]) map.removeLayer(layers[name]);
-  layers[name]=L.geoJSON(geo,{style:{color:'#ffd54a',weight:1,fillOpacity:0.15}}).addTo(map); }
-async function fetchJSON(u){ const r=await fetch(u); if(!r.ok) throw new Error(u); return r.json(); }
-async function load(){
-  const base=$('#base').value.replace(/\/$/,'');
-  const loka=await fetchJSON(`${base}/master/atlases/worlds/loka.geojson`);
-  const drav=await fetchJSON(`${base}/master/atlases/continents/dravon.geojson`);
-  const lart=await fetchJSON(`${base}/master/atlases/countries/lart.geojson`);
-  const ram =await fetchJSON(`${base}/master/atlases/cities/ramal.geojson`);
-  addLayer('loka',loka); addLayer('dravon',drav); addLayer('lart',lart); addLayer('ramal',ram);addLayer('loka', loka, '#ffd54a');
-addLayer('dravon', dravon, '#ff5555');
-addLayer('lart', lart, '#55ff55');
-addLayer('ramal', ram, '#5555ff');
-  map.fitBounds(layers['ramal'].getBounds());
-  <script>
-function exportSVG(){
-  // ดึง SVG ของ Leaflet overlay
-  const svg = document.querySelector('#map .leaflet-overlay-pane svg');
-  if(!svg){ alert('ยังไม่พบชั้นแผนที่บน SVG — กด Load ก่อน'); return; }
+const C=$('#view'), ctx=C.getContext('2d',{alpha:false});
+let W=0,H=0; function resize(){W=innerWidth;H=innerHeight-48;C.width=W;C.height=H; draw()} addEventListener('resize',resize);
+let state={features:[], bounds:null, era:''};
+let cam={x:0,y:0,scale:3}; // พื้นที่พิกัด Canon ~[-200..200] จะพอดีกับจอด้วย scale เริ่มต้น
+let dragging=false, lx=0, ly=0;
 
-  // ใส่ viewBox ให้สเกลถูกต้อง
-  const bbox = svg.getBBox();
-  svg.setAttribute('viewBox', `${bbox.x} ${bbox.y} ${bbox.width} ${bbox.height}`);
-  svg.setAttribute('xmlns','http://www.w3.org/2000/svg');
+async function j(url){const r=await fetch(url); if(!r.ok) throw new Error(url+' '+r.status); return r.json();}
+function extent(fc){
+  let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
+  (fc.features||[]).forEach(f=>{
+    const g=f.geometry; if(!g) return;
+    if(g.type==='Polygon'){
+      g.coordinates[0].forEach(([x,y])=>{ if(x<minX)minX=x; if(y<minY)minY=y; if(x>maxX)maxX=x; if(y>maxY)maxY=y; });
+    } else if(g.type==='Point'){
+      const [x,y]=g.coordinates; if(x<minX)minX=x; if(y<minY)minY=y; if(x>maxX)maxX=x; if(y>maxY)maxY=y;
+    }
+  });
+  if(!isFinite(minX)) return null;
+  return {minX,minY,maxX,maxY};
+}
+function fit(){
+  const b=state.bounds; if(!b) return;
+  const pad=20, vw=W-2*pad, vh=H-2*pad, bw=b.maxX-b.minX, bh=b.maxY-b.minY;
+  const s=Math.min(vw/bw, vh/bh);
+  cam.scale=s; cam.x=-(b.minX+b.maxX)/2; cam.y=-(b.minY+b.maxY)/2;
+  draw();
+}
+function toScreen(x,y){ return [ (x+cam.x)*cam.scale + W/2, H/2 - (y+cam.y)*cam.scale ]; }
 
-  // แปลงเป็นไฟล์และดาวน์โหลด
-  const blob = new Blob([svg.outerHTML], {type:'image/svg+xml;charset=utf-8'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url; a.download = 'atlas-export.svg';
-  document.body.appendChild(a); a.click(); a.remove();
-  URL.revokeObjectURL(url);
+function draw(){
+  ctx.fillStyle="#0e0e10"; ctx.fillRect(0,0,W,H);
+  ctx.lineJoin="round"; ctx.lineCap="round";
+  const era=$('#era').value.trim();
+
+  // Loka / Dravon / Lart / Ramal เลเยอร์สีต่างกัน
+  const color={world:"#ffd54a", continent:"#ff6b6b", country:"#66e29a", city:"#6aa9ff", poi:"#ffffff"};
+  state.features.forEach(f=>{
+    if(era && f.properties?.era && !f.properties.era.includes(era)) return;
+    const kind=f.properties?.kind||'';
+    const type=f.geometry?.type;
+    const col =
+      (kind.includes('world')?color.world:
+       kind.includes('continent')?color.continent:
+       kind.includes('country')?color.country:
+       kind.includes('city')?color.city:
+       type==='Point'?color.poi:'#d0d0d0');
+
+    if(type==='Polygon'){
+      const ring=f.geometry.coordinates[0];
+      ctx.beginPath();
+      ring.forEach((pt,i)=>{const [sx,sy]=toScreen(pt[0],pt[1]); if(i===0) ctx.moveTo(sx,sy); else ctx.lineTo(sx,sy);});
+      ctx.closePath();
+      ctx.fillStyle=col+"22"; ctx.fill();
+      ctx.strokeStyle=col; ctx.lineWidth=2; ctx.stroke();
+    } else if(type==='Point'){
+      const [sx,sy]=toScreen(f.geometry.coordinates[0],f.geometry.coordinates[1]);
+      ctx.fillStyle=col; ctx.beginPath(); ctx.arc(sx,sy,4,0,Math.PI*2); ctx.fill();
+    }
+  });
+
+  // HUD
+  ctx.fillStyle="#ffffff88"; ctx.font="12px system-ui";
+  ctx.fillText(`scale:${cam.scale.toFixed(2)}  offset:(${cam.x.toFixed(1)}, ${cam.y.toFixed(1)})  era:${era||'ALL'}`, 10, 16);
 }
-document.querySelector('#export').addEventListener('click', exportSVG);
-</script>
+
+async function loadAll(){
+  try{
+    const base=$('#base').value.replace(/\/$/,'');
+    const urls=[
+      `${base}/master/atlases/worlds/loka.geojson`,
+      `${base}/master/atlases/continents/dravon.geojson`,
+      `${base}/master/atlases/countries/lart.geojson`,
+      `${base}/master/atlases/cities/ramal.geojson`,
+      `${base}/master/atlases/poi.geojson`,
+    ];
+    const [loka, dravon, lart, ramal, poi] = await Promise.all(urls.map(j));
+    // รวมเป็นชุดเดียว (เรียงใหญ่→เล็ก)
+    const all = []
+      .concat((loka.features||[]))
+      .concat((dravon.features||[]))
+      .concat((lart.features||[]))
+      .concat((ramal.features||[]))
+      .concat((poi.features||[]));
+    state.features=all;
+    state.bounds=extent({features:all});
+    if(!state.bounds) throw new Error('ไม่มี geometry ในไฟล์ atlas');
+    fit();
+  }catch(e){
+    alert('โหลด Atlas ไม่สำเร็จ: '+e.message);
+    console.error(e);
+  }
 }
-$('#load').addEventListener('click',load);
+
+// โต้ตอบ: pan / zoom / touch
+C.addEventListener('pointerdown',e=>{dragging=true; lx=e.clientX; ly=e.clientY; C.setPointerCapture(e.pointerId);});
+C.addEventListener('pointermove',e=>{
+  if(!dragging) return;
+  const dx=e.clientX-lx, dy=e.clientY-ly; lx=e.clientX; ly=e.clientY;
+  cam.x += dx/cam.scale; cam.y -= dy/cam.scale; draw();
+});
+C.addEventListener('pointerup',()=>dragging=false);
+C.addEventListener('wheel',e=>{
+  e.preventDefault();
+  const sPrev=cam.scale;
+  const delta = Math.sign(e.deltaY)*-0.1;
+  cam.scale = Math.max(0.1, cam.scale*(1+delta));
+  // ซูมเข้าจุดเมาส์ (คงตำแหน่งชี้)
+  const rect=C.getBoundingClientRect();
+  const mx=e.clientX-rect.left, my=e.clientY-rect.top;
+  const wx = (mx - W/2)/sPrev - cam.x, wy = (H/2 - my)/sPrev - cam.y;
+  cam.x = -wx - (mx - W/2)/cam.scale;
+  cam.y = -wy - (H/2 - my)/cam.scale;
+  draw();
+},{passive:false});
+
+// UI
+$('#load').addEventListener('click',loadAll);
+$('#fit').addEventListener('click',fit);
+$('#era').addEventListener('change',draw);
+
+resize(); // init
 </script>
 </body></html>
