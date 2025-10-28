@@ -8,6 +8,7 @@
   <div class="brand">🟡 kranker · atlas</div>
   <input id="base" value="https://jimage3.github.io/canon-core">
   <button id="load">Load</button>
+  <button id="export">Export SVG</button>
 </header>
 <div id="map"></div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -30,6 +31,27 @@ addLayer('dravon', dravon, '#ff5555');
 addLayer('lart', lart, '#55ff55');
 addLayer('ramal', ram, '#5555ff');
   map.fitBounds(layers['ramal'].getBounds());
+  <script>
+function exportSVG(){
+  // ดึง SVG ของ Leaflet overlay
+  const svg = document.querySelector('#map .leaflet-overlay-pane svg');
+  if(!svg){ alert('ยังไม่พบชั้นแผนที่บน SVG — กด Load ก่อน'); return; }
+
+  // ใส่ viewBox ให้สเกลถูกต้อง
+  const bbox = svg.getBBox();
+  svg.setAttribute('viewBox', `${bbox.x} ${bbox.y} ${bbox.width} ${bbox.height}`);
+  svg.setAttribute('xmlns','http://www.w3.org/2000/svg');
+
+  // แปลงเป็นไฟล์และดาวน์โหลด
+  const blob = new Blob([svg.outerHTML], {type:'image/svg+xml;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'atlas-export.svg';
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+}
+document.querySelector('#export').addEventListener('click', exportSVG);
+</script>
 }
 $('#load').addEventListener('click',load);
 </script>
