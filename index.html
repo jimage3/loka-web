@@ -25,7 +25,10 @@ async function load(){
   const drav=await fetchJSON(`${base}/master/atlases/continents/dravon.geojson`);
   const lart=await fetchJSON(`${base}/master/atlases/countries/lart.geojson`);
   const ram =await fetchJSON(`${base}/master/atlases/cities/ramal.geojson`);
-  addLayer('loka',loka); addLayer('dravon',drav); addLayer('lart',lart); addLayer('ramal',ram);
+  addLayer('loka',loka); addLayer('dravon',drav); addLayer('lart',lart); addLayer('ramal',ram);addLayer('loka', loka, '#ffd54a');
+addLayer('dravon', dravon, '#ff5555');
+addLayer('lart', lart, '#55ff55');
+addLayer('ramal', ram, '#5555ff');
   map.fitBounds(layers['ramal'].getBounds());
 }
 $('#load').addEventListener('click',load);
