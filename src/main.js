@@ -1,40 +1,41 @@
 // src/main.js
-import { LOKA_JSON } from "./config.js";
+import { loka_json } from "./config.js";
 
-async function fetchText(url) {
-  const r = await fetch(url, { cache: "no-cache" });
-  if (!r.ok) throw new Error(`fetch failed: ${url}`);
-  return r.text();
-}
-async function fetchJSON(url) {
+const $ = (sel) => document.querySelector(sel);
+
+async function get_json(url) {
   const r = await fetch(url, { cache: "no-cache" });
   if (!r.ok) throw new Error(`fetch failed: ${url}`);
   return r.json();
 }
 
+async function get_text(url) {
+  const r = await fetch(url, { cache: "no-cache" });
+  if (!r.ok) throw new Error(`fetch failed: ${url}`);
+  return r.text();
+}
+
 async function boot() {
-  const status = document.getElementById("status");
-  status.textContent = "loading loka.json…";
-  const loka = await fetchJSON(LOKA_JSON);
+  $("#status").textContent = "loading: loka.json";
+  const meta = await get_json(loka_json);
 
-  // โหลด relief เป็นพื้นหลัง
-  status.textContent = "loading terrain relief…";
-  const reliefImg = new Image();
-  reliefImg.crossOrigin = "anonymous";
-  reliefImg.src = loka.assets.terrain_relief;
-  await reliefImg.decode();
-  const terrain = document.getElementById("terrain");
-  terrain.style.backgroundImage = `url("${reliefImg.src}")`;
+  // พื้นหลังเป็น relief
+  $("#status").textContent = "loading: terrain relief";
+  const relief = new Image();
+  relief.crossOrigin = "anonymous";
+  relief.src = meta.assets.terrain_relief;
+  await relief.decode();
+  $("#terrain").style.backgroundImage = `url("${relief.src}")`;
 
-  // โหลด landmass svg ซ้อนทับ
-  status.textContent = "loading landmass svg…";
-  const svgText = await fetchText(loka.assets.landmass_svg);
-  document.getElementById("landmass").innerHTML = svgText;
+  // ซ้อน landmass เป็น overlay (vector)
+  $("#status").textContent = "loading: landmass svg";
+  const svg = await get_text(meta.assets.landmass_svg);
+  $("#landmass").innerHTML = svg;
 
-  status.textContent = "ready";
+  $("#status").textContent = "ready";
 }
 
 boot().catch((e) => {
   console.error(e);
-  document.getElementById("status").textContent = `error: ${e.message}`;
+  $("#status").textContent = `error: ${e.message}`;
 });
