@@ -1,0 +1,11 @@
+{
+  "id": "loka",
+  "name": "Loka",
+  "projection": "equirectangular",
+  "width": 4096,
+  "height": 2048,
+  "continents": [
+    { "id": "claric", "name": "Claric", "x": 540, "y": 220 },
+    { "id": "norvian", "name": "Norvian", "x": 760, "y": 640 }
+  ]
+}
