@@ -1,21 +1,20 @@
-<!-- index.html -->
 <!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>canon atlas viewer — loka</title>
+  <title>atlas viewer — loka</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <style>
-    :root { --w: min(95vw, 1600px); }
-    body { margin:0; font-family: system-ui, sans-serif; background:#0b0b0d; color:#eaeaea; display:flex; flex-direction:column; align-items:center; gap:12px; padding:16px; }
+    :root { --w: min(96vw, 1600px); }
+    body { margin:0; background:#0b0e12; color:#e7ebf3; font-family:system-ui, sans-serif;
+           display:flex; flex-direction:column; align-items:center; gap:12px; padding:16px; }
     #status { font-size:14px; opacity:.8 }
-    #frame { width:var(--w); aspect-ratio:2/1; position:relative; border:1px solid #333; border-radius:8px; overflow:hidden; background:#111; }
-    #terrain { position:absolute; inset:0; background-size:cover; background-position:center; filter: contrast(1.06) saturate(1.02); }
+    #frame { width:var(--w); aspect-ratio:2/1; position:relative; border:1px solid #2a2f3a;
+             border-radius:8px; overflow:hidden; background:#0e1116; }
+    #terrain { position:absolute; inset:0; background-size:cover; background-position:center;
+               image-rendering:auto; filter:contrast(1.05) saturate(1.02); }
     #landmass { position:absolute; inset:0; pointer-events:none; }
     #landmass svg { width:100%; height:100%; }
-    /* ปุ่ม debug เล็กๆ */
-    #toolbar { display:flex; gap:8px; }
-    button { background:#1f2530; color:#dbe3ff; border:1px solid #3a4456; padding:6px 10px; border-radius:6px; }
   </style>
 </head>
 <body>
@@ -24,13 +23,7 @@
     <div id="terrain"></div>
     <div id="landmass"></div>
   </div>
-  <div id="toolbar">
-    <button id="reload">reload</button>
-  </div>
 
-  <script type="module">
-    import "./src/main.js";
-    document.getElementById("reload").onclick = () => location.reload();
-  </script>
+  <script type="module" src="./src/main.js"></script>
 </body>
 </html>
