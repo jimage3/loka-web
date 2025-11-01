@@ -1,8 +1,8 @@
 const canvas = document.getElementById('mapCanvas');
 const ctx = canvas.getContext('2d');
 let scale = 1, offsetX = 0, offsetY = 0;
-
 const terrain = new Image();
+
 terrain.src = 'data/terrain/Loka_Terrain_relief.png';
 terrain.onload = draw;
 
@@ -36,3 +36,5 @@ canvas.addEventListener('mousemove', e => {
   lastX = e.clientX; lastY = e.clientY;
   draw();
 });
+
+window.addEventListener('resize', draw);
