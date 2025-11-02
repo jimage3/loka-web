@@ -1,39 +1,48 @@
-// src/main.js
+// โหลด loka.json → วาง relief เป็นพื้นหลัง → ซ้อน landmass.svg เป็น overlay
 import { loka_json } from "./config.js";
 
-const $ = (sel) => document.querySelector(sel);
+const $ = (s) => document.querySelector(s);
 
-async function get_json(url) {
+async function fetchJSON(url) {
   const r = await fetch(url, { cache: "no-cache" });
   if (!r.ok) throw new Error(`fetch failed: ${url}`);
   return r.json();
 }
-
-async function get_text(url) {
+async function fetchText(url) {
   const r = await fetch(url, { cache: "no-cache" });
   if (!r.ok) throw new Error(`fetch failed: ${url}`);
   return r.text();
 }
 
 async function boot() {
-  $("#status").textContent = "loading: loka.json";
-  const meta = await get_json(loka_json);
+  $("#status").textContent = "loading loka.json…";
+  const meta = await fetchJSON(loka_json);
 
-  // พื้นหลังเป็น relief
-  $("#status").textContent = "loading: terrain relief";
+  // 1) terrain relief (background) + fallback สำหรับ iPad (หลบ EncodingError)
+  $("#status").textContent = "loading terrain relief…";
   const relief = new Image();
   relief.crossOrigin = "anonymous";
   relief.src = meta.assets.terrain_relief;
-  await relief.decode();
+  try {
+    await relief.decode();
+  } catch {
+    await new Promise((ok) => (relief.onload = ok));
+  }
   $("#terrain").style.backgroundImage = `url("${relief.src}")`;
 
-  // ซ้อน landmass เป็น overlay (vector)
-  $("#status").textContent = "loading: landmass svg";
-  const svg = await get_text(meta.assets.landmass_svg);
-  $("#landmass").innerHTML = svg;
+  // 2) landmass svg (overlay)
+  $("#status").textContent = "loading landmass svg…";
+  const svgText = await fetchText(meta.assets.landmass_svg);
+  $("#landmass").innerHTML = svgText;
 
   $("#status").textContent = "ready";
 }
+
+// debug เล็ก ๆ บน iPad (โชว์ error ในหน้า)
+window.onerror = (msg, src, line, col) => {
+  const s = document.getElementById("status");
+  s.textContent = `error: ${msg} @ ${src}:${line}:${col}`;
+};
 
 boot().catch((e) => {
   console.error(e);
