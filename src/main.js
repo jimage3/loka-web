@@ -1,20 +1,18 @@
 import { loka_json } from "./config.js";
 const $=(s)=>document.querySelector(s);
 
-async function j(url){const r=await fetch(url,{cache:"no-cache"});if(!r.ok)throw new Error(url);return r.json();}
-async function t(url){const r=await fetch(url,{cache:"no-cache"});if(!r.ok)throw new Error(url);return r.text();}
+async function j(u){const r=await fetch(u,{cache:"no-cache"});if(!r.ok)throw new Error(u);return r.json();}
+async function t(u){const r=await fetch(u,{cache:"no-cache"});if(!r.ok)throw new Error(u);return r.text();}
 
 async function boot(){
   $("#status").textContent="loading loka.json…";
   const meta=await j(loka_json);
 
-  // relief bg (fallback สำหรับ iPad)
   $("#status").textContent="loading relief…";
   const img=new Image(); img.crossOrigin="anonymous"; img.src=meta.assets.terrain_relief;
   try{await img.decode();}catch{await new Promise(ok=>img.onload=ok);}
   $("#terrain").style.backgroundImage=`url("${img.src}")`;
 
-  // landmass svg overlay (บังคับโปร่งใส)
   $("#status").textContent="loading landmass…";
   const raw=await t(meta.assets.landmass_svg);
   const svg=raw.replace("<svg", `<svg><style>
@@ -24,13 +22,12 @@ async function boot(){
   </style>`);
   $("#landmass").innerHTML=svg;
 
-  // UI
-  const opacity = $("#opacity");
-  opacity.addEventListener("input", ()=> { $("#landmass").style.opacity = opacity.value; });
+  const op=$("#opacity");
+  op.addEventListener("input",()=>{$("#landmass").style.opacity=op.value;});
   $("#toggle-land").onclick=()=>{$("#landmass").classList.toggle("hide");};
   $("#toggle-relief").onclick=()=>{$("#terrain").classList.toggle("hide");};
 
   $("#status").textContent="ready";
 }
-window.onerror=(m,src,l,c)=>{$("#status").textContent=`error: ${m}`;};
+window.onerror=(m)=>{$("#status").textContent=`error: ${m}`;};
 boot().catch(e=>{$("#status").textContent=`error: ${e.message}`;});
